@@ -3,6 +3,7 @@
 struct StepperMotor {
   int steps;
   int cur_dir;
+  int axis;
 
 //encoder
 //limit

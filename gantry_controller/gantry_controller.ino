@@ -1,37 +1,39 @@
 
 #include "stepper_motor.h"
-
-#define X_STEP 52
-#define X_DIR 53
-#define X_ENABLE 43
-#define Y_STEP 50
-#define Y_DIR 51
-#define Y_ENABLE 45
-#define Z_STEP 48
-#define Z_DIR 49
-#define Z_ENABLE 47
-
-#define STEPPER_CPR 24
+#include "pins.h"
 
 //motor objects
 struct StepperMotor x_stepper;
 struct StepperMotor y_stepper;
 struct StepperMotor z_stepper;
 
+int cur_bldc_speed=0;
+
+int x = 1;
+int y = 1;
+int z = 1;
+
 void setup() {
   Serial.begin(9600);
   Serial.println("Hi Danny!");
   
-  initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE);
-  initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE);
-  initializeStepper(&z_stepper,Z_STEP,Z_DIR,Z_ENABLE);
+  initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE,1);
+  initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE,2);
+  initializeStepper(&z_stepper,Z_STEP,Z_DIR,Z_ENABLE,3);
+  
+  pinMode(DRILL_PWM,OUTPUT);
+  
+  initializeEncoders();
   
 }
 
 void loop() {
-  goToStepperPosition(&x_stepper, STEPPER_CPR*2);
-  goToStepperPosition(&y_stepper, STEPPER_CPR*2);
-  goToStepperPosition(&z_stepper, STEPPER_CPR*2);
+  
+  analogWrite(DRILL_PWM,cur_bldc_speed);
+  
+  goToStepperPosition(&x_stepper, x/MM_PER_REV*STEPPER_CPR);
+  goToStepperPosition(&y_stepper, y/MM_PER_REV*STEPPER_CPR);
+  goToStepperPosition(&z_stepper, z/MM_PER_REV*STEPPER_CPR);
   
   Serial.println("loop");
   delay(5000);
