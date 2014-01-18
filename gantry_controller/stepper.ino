@@ -5,7 +5,7 @@
 
 #define USE_ENCODER 0
 
-int current_speed = 15;
+int current_speed = 5;
 
 void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin, int enable_pin, int axis)
 {
@@ -47,25 +47,29 @@ void sleepStepper(struct StepperMotor * stepper) { digitalWrite(stepper->enable_
 
 void goToStepperPosition(struct StepperMotor * stepper, double pos) {
   
-  int encoder_position = 0;
-  
-  if (stepper->axis == 1) encoder_position = getXEncoderDistance();
-  else if (stepper->axis == 2) encoder_position = getYEncoderDistance();
-  else if (stepper->axis == 3) encoder_position = getZEncoderDistance();
+  int encoder_position = getEncoderDistance(stepper->axis);
   
   wakeStepper(stepper);
   
-  if (stepper->steps < pos) {
+  if (getEncoderDistance(stepper->axis) > pos) {
     changeStepperDir(stepper, STEPPER_FORWARD);
-    while (stepper->steps < pos) {
+    while (getEncoderDistance(stepper->axis) > pos) {
       stepOnce(stepper,current_speed);
     }
-  } else if (stepper->steps > pos) {
+  } else if (getEncoderDistance(stepper->axis) < pos) {
     changeStepperDir(stepper, STEPPER_BACKWARD);
-    while (stepper->steps > pos) {
+    while (getEncoderDistance(stepper->axis) < pos) {
       stepOnce(stepper,current_speed);
     }
   }
   
   sleepStepper(stepper);
+}
+
+bool checkPosition(struct StepperMotor * stepper) {
+  Serial.println(stepper->steps*MM_PER_REV/STEPPER_CPR);
+  if (abs(stepper->steps/MM_PER_REV*STEPPER_CPR - getEncoderDistance(stepper->axis)) < STEPPER_ENCODER_TOL)
+    return true;
+  else
+    return false;
 }
