@@ -66,7 +66,7 @@ void goToStepperPosition(struct StepperMotor * stepper, double pos) {
   sleepStepper(stepper);
 }
 
-bool checkPosition(struct StepperMotor * stepper) {
+boolean checkPosition(struct StepperMotor * stepper) {
   Serial.println(stepper->steps*MM_PER_REV/STEPPER_CPR);
   if (abs(stepper->steps/MM_PER_REV*STEPPER_CPR - getEncoderDistance(stepper->axis)) < STEPPER_ENCODER_TOL)
     return true;
