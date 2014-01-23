@@ -8,7 +8,7 @@ struct StepperMotor x_stepper;
 struct StepperMotor y_stepper;
 struct StepperMotor z_stepper;
 
-int cur_bldc_speed=0;
+int cur_bldc_speed=40; // no more than 70?
 
 struct RingBuffer ring_buffer;
 
@@ -30,15 +30,21 @@ void setup() {
   
   initializeRingBuffer(&ring_buffer);
   
+  // Changing PWM Frequency from http://forum.arduino.cc/index.php?PHPSESSID=vtjh1giaejdbbssm01hvhlnl76&topic=72092.msg541587#msg541587
+  int myEraser = 7;             // this is 111 in binary and is used as an eraser
+  TCCR2B &= ~myEraser;   // this operation (AND plus NOT),  set the three bits in TCCR2B to 0
+  int myPrescaler = 1;         // this could be a number in [1 , 6]. 1=31kHz
+  TCCR2B |= myPrescaler;  //this operation (OR), replaces the last three bits in TCCR2B with our new value 011
+  
 }
 
 void loop() {
-  /*
+  
   analogWrite(DRILL_PWM,cur_bldc_speed);
   
-  /goToStepperPosition(&x_stepper, x);
-  //goToStepperPosition(&y_stepper, y/MM_PER_REV*STEPPER_CPR);
-  //goToStepperPosition(&z_stepper, z/MM_PER_REV*STEPPER_CPR);
+  goToStepperPosition(&x_stepper, x);
+  //goToStepperPosition(&y_stepper, y);
+  //goToStepperPosition(&z_stepper, z);
   
   Serial.println("loop");
   Serial.println(getEncoderDistance(x_stepper.axis));
@@ -51,13 +57,28 @@ void loop() {
   
   Serial.println("loop");
   Serial.println(getEncoderDistance(x_stepper.axis));
-  Serial.println(checkPosition(&x_stepper));*/
+  Serial.println(checkPosition(&x_stepper));
   delay(2000);
   
 }
 
 void serialHandler(){
+  if (!ringBufferEmpty(&ring_buffer))
+    return;
   
+  String command = "";
+  char cur_char = ringBufferDeque(&ring_buffer);
+  
+  while (cur_char != '\n' && (!ringBufferEmpty(&ring_buffer))) {
+    command += cur_char;
+    cur_char = ringBufferDeque(&ring_buffer);
+  }
+  
+  if (command.startsWith("m0")) {
+    // stop
+  } else if (command.startsWith("g0")) {
+    // goto x y z
+  } 
 }
 
 /*

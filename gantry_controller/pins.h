@@ -17,7 +17,7 @@
 #define Z_ENCODER_A 21
 #define Z_ENCODER_B 24
 
-#define DRILL_PWM 13
+#define DRILL_PWM 10
 
 #define MM_PER_REV 0.61 //1/41.7"
 
