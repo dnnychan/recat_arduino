@@ -1,9 +1,5 @@
 #include "stepper_motor.h"
-
-#define STEPPER_FORWARD 0
-#define STEPPER_BACKWARD 1
-
-#define USE_ENCODER 0
+#include "pins.h"
 
 int current_speed = 5;
 
@@ -47,7 +43,7 @@ void sleepStepper(struct StepperMotor * stepper) { digitalWrite(stepper->enable_
 
 void goToStepperPosition(struct StepperMotor * stepper, double pos) {
   
-  int encoder_position = getEncoderDistance(stepper->axis);
+  //int encoder_position = getEncoderDistance(stepper->axis);
   
   wakeStepper(stepper);
   

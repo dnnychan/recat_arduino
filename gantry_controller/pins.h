@@ -24,8 +24,13 @@
 #define STEPPER_CPR 24
 #define ENCODER_CPR 512
 
+#define STEPPER_FORWARD 0
+#define STEPPER_BACKWARD 1
+
 #define AXIS_X 1
 #define AXIS_Y 2
 #define AXIS_Z 3
 
 #define STEPPER_ENCODER_TOL 0.1
+
+#define POSITION_TOLERANCE 0.1 //mm

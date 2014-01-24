@@ -12,9 +12,13 @@ int cur_bldc_speed=40; // no more than 70?
 
 struct RingBuffer ring_buffer;
 
-int x = 10;
-int y = 1;
-int z = 1;
+int x_destination = 10;
+int y_destination = 1;
+int z_destination = 1;
+
+int stepper_speed = 5;
+
+//int encoder_position_x = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -40,8 +44,8 @@ void setup() {
 
 void loop() {
   
-  analogWrite(DRILL_PWM,cur_bldc_speed);
-  
+  //analogWrite(DRILL_PWM,cur_bldc_speed);
+  /*
   goToStepperPosition(&x_stepper, x);
   //goToStepperPosition(&y_stepper, y);
   //goToStepperPosition(&z_stepper, z);
@@ -58,7 +62,58 @@ void loop() {
   Serial.println("loop");
   Serial.println(getEncoderDistance(x_stepper.axis));
   Serial.println(checkPosition(&x_stepper));
-  delay(2000);
+  delay(2000);*/
+  
+  Serial.println(getEncoderDistance(x_stepper.axis));
+  
+  // x stepper control
+  if (abs(getEncoderDistance(x_stepper.axis) - x_destination) > POSITION_TOLERANCE) {
+    wakeStepper(&x_stepper);
+    
+    if (getEncoderDistance(x_stepper.axis) > x_destination) {
+      changeStepperDir(&x_stepper, STEPPER_FORWARD);
+      stepOnce(&x_stepper,stepper_speed);
+    } else if (getEncoderDistance(x_stepper.axis) < x_destination) {
+      changeStepperDir(&x_stepper, STEPPER_BACKWARD);
+      stepOnce(&x_stepper,stepper_speed);
+    }
+  }
+  else {
+    sleepStepper(&x_stepper);
+    // pull next destination
+  }
+  /*
+  // y stepper control
+  if (abs(getEncoderDistance(y_stepper.axis) - y_destination) > POSITION_TOLERANCE) {
+    wakeStepper(&y_stepper);
+    
+    if (getEncoderDistance(y_stepper.axis) > y_destination) {
+      changeStepperDir(&y_stepper, STEPPER_FORWARD);
+      stepOnce(&y_stepper,stepper_speed);
+    } else if (getEncoderDistance(y_stepper.axis) < y_destination) {
+      changeStepperDir(&y_stepper, STEPPER_BACKWARD);
+      stepOnce(&y_stepper,stepper_speed);
+    }
+  }
+  else {
+    sleepStepper(&y_stepper);
+  }
+  
+  // z stepper control
+  if (abs(getEncoderDistance(z_stepper.axis) - z_destination) > POSITION_TOLERANCE) {
+    wakeStepper(&z_stepper);
+    
+    if (getEncoderDistance(z_stepper.axis) > z_destination) {
+      changeStepperDir(&z_stepper, STEPPER_FORWARD);
+      stepOnce(&z_stepper,stepper_speed);
+    } else if (getEncoderDistance(z_stepper.axis) < z_destination) {
+      changeStepperDir(&z_stepper, STEPPER_BACKWARD);
+      stepOnce(&z_stepper,stepper_speed);
+    }
+  }
+  else {
+    sleepStepper(&z_stepper);
+  }*/
   
 }
 
