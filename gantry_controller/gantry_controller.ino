@@ -2,11 +2,18 @@
 #include "stepper_motor.h"
 #include "pins.h"
 #include "ringbuffer.h"
+#include "mag_encoder.h"
 
 //motor objects
 struct StepperMotor x_stepper;
 struct StepperMotor y_stepper;
 struct StepperMotor z_stepper;
+
+//mag encoder objects
+struct MagEncoder mag_encoder_1;
+struct MagEncoder mag_encoder_2;
+struct MagEncoder mag_encoder_3;
+struct MagEncoder mag_encoder_4;
 
 int cur_bldc_speed=40; // no more than 70?
 
@@ -27,13 +34,12 @@ void setup() {
   initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE,AXIS_X);
   initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE,AXIS_Y);
   initializeStepper(&z_stepper,Z_STEP,Z_DIR,Z_ENABLE,AXIS_Z);
+  initializeEncoders();
+  initializeRingBuffer(&ring_buffer);
+  initializeMagEncoder(&mag_encoder_1,&mag_encoder_2,&mag_encoder_3,&mag_encoder_4);
   
   pinMode(DRILL_PWM,OUTPUT);
-  
-  initializeEncoders();
-  
-  initializeRingBuffer(&ring_buffer);
-  
+
   // Changing PWM Frequency from http://forum.arduino.cc/index.php?PHPSESSID=vtjh1giaejdbbssm01hvhlnl76&topic=72092.msg541587#msg541587
   int myEraser = 7;             // this is 111 in binary and is used as an eraser
   TCCR2B &= ~myEraser;   // this operation (AND plus NOT),  set the three bits in TCCR2B to 0
@@ -64,7 +70,8 @@ void loop() {
   Serial.println(checkPosition(&x_stepper));
   delay(2000);*/
   
-  Serial.println(getEncoderDistance(x_stepper.axis));
+  Serial.println(readMagEncoder(&mag_encoder_1));
+  /*Serial.println(getEncoderDistance(x_stepper.axis));
   
   // x stepper control
   if (abs(getEncoderDistance(x_stepper.axis) - x_destination) > POSITION_TOLERANCE) {

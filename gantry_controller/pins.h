@@ -1,14 +1,14 @@
 #pragma once
 
-#define X_STEP 52
-#define X_DIR 53
-#define X_ENABLE 43
-#define Y_STEP 50
-#define Y_DIR 51
-#define Y_ENABLE 45
-#define Z_STEP 48
-#define Z_DIR 49
-#define Z_ENABLE 47
+#define X_STEP 46
+#define X_DIR 47
+#define X_ENABLE 37
+#define Y_STEP 44
+#define Y_DIR 45
+#define Y_ENABLE 39
+#define Z_STEP 42
+#define Z_DIR 43
+#define Z_ENABLE 41
 
 #define X_ENCODER_A 19
 #define X_ENCODER_B 22
@@ -18,6 +18,13 @@
 #define Z_ENCODER_B 24
 
 #define DRILL_PWM 10
+
+#define DATAPIN 50
+#define CLOCKPIN 52
+#define CS_1 32
+#define CS_2 33
+#define CS_3 34
+#define CS_4 35
 
 #define MM_PER_REV 0.61 //1/41.7"
 
