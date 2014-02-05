@@ -12,4 +12,5 @@ struct StepperMotor {
   int step_pin;
   int dir_pin;
   int enable_pin;
+  int switch_pin;
 };

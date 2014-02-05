@@ -10,6 +10,10 @@
 #define Z_DIR 43
 #define Z_ENABLE 41
 
+#define X_BUTTON 36
+#define Y_BUTTON 38
+#define Z_BUTTON 40
+
 #define X_ENCODER_A 19
 #define X_ENCODER_B 22
 #define Y_ENCODER_A 20

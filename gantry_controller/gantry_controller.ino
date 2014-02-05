@@ -15,7 +15,7 @@ struct MagEncoder mag_encoder_2;
 struct MagEncoder mag_encoder_3;
 struct MagEncoder mag_encoder_4;
 
-int cur_bldc_speed=40; // no more than 70?
+int cur_bldc_speed=00; //30 to 90 at R=470
 
 struct RingBuffer ring_buffer;
 
@@ -28,29 +28,35 @@ int stepper_speed = 5;
 //int encoder_position_x = 0;
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("Hi Danny!");
-  
-  initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE,AXIS_X);
-  initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE,AXIS_Y);
-  initializeStepper(&z_stepper,Z_STEP,Z_DIR,Z_ENABLE,AXIS_Z);
-  initializeEncoders();
-  initializeRingBuffer(&ring_buffer);
-  initializeMagEncoder(&mag_encoder_1,&mag_encoder_2,&mag_encoder_3,&mag_encoder_4);
-  
+  // TODO: Make BLDC not jump around during start up
   pinMode(DRILL_PWM,OUTPUT);
-
   // Changing PWM Frequency from http://forum.arduino.cc/index.php?PHPSESSID=vtjh1giaejdbbssm01hvhlnl76&topic=72092.msg541587#msg541587
   int myEraser = 7;             // this is 111 in binary and is used as an eraser
   TCCR2B &= ~myEraser;   // this operation (AND plus NOT),  set the three bits in TCCR2B to 0
   int myPrescaler = 1;         // this could be a number in [1 , 6]. 1=31kHz
   TCCR2B |= myPrescaler;  //this operation (OR), replaces the last three bits in TCCR2B with our new value 011
+  analogWrite(DRILL_PWM,0);
+  
+  initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE,X_BUTTON,AXIS_X);
+  initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE,Y_BUTTON,AXIS_Y);
+  initializeStepper(&z_stepper,Z_STEP,Z_DIR,Z_ENABLE,Z_BUTTON,AXIS_Z);
+  calibrateStepper(&x_stepper);
+  //calibrateStepper(&y_stepper);
+  //calibrateStepper(&z_stepper);
+  initializeEncoders();
+  initializeRingBuffer(&ring_buffer);
+  initializeMagEncoder(&mag_encoder_1,&mag_encoder_2,&mag_encoder_3,&mag_encoder_4);
+  
+  Serial.begin(9600);
+  Serial.println("Hi Danny!");
   
 }
 
 void loop() {
   
-  //analogWrite(DRILL_PWM,cur_bldc_speed);
+  analogWrite(DRILL_PWM,cur_bldc_speed);
+  
+  //while(1) { Serial.println(digitalRead(x_stepper.switch_pin));}
   /*
   goToStepperPosition(&x_stepper, x);
   //goToStepperPosition(&y_stepper, y);
@@ -70,8 +76,8 @@ void loop() {
   Serial.println(checkPosition(&x_stepper));
   delay(2000);*/
   
-  Serial.println(readMagEncoder(&mag_encoder_1));
-  /*Serial.println(getEncoderDistance(x_stepper.axis));
+  //Serial.println(readMagEncoder(&mag_encoder_1));
+  Serial.println(getEncoderDistance(x_stepper.axis));
   
   // x stepper control
   if (abs(getEncoderDistance(x_stepper.axis) - x_destination) > POSITION_TOLERANCE) {
@@ -87,6 +93,7 @@ void loop() {
   }
   else {
     sleepStepper(&x_stepper);
+    //cur_bldc_speed=40;
     // pull next destination
   }
   /*
