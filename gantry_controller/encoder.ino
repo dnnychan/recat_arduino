@@ -1,8 +1,8 @@
 #include "pins.h"
 
-int encoder_x_pos = 0;
-int encoder_y_pos = 0;
-int encoder_z_pos = 0;
+long encoder_x_pos = 0;
+long encoder_y_pos = 0;
+long encoder_z_pos = 0;
 
 void initializeEncoders() {
   pinMode(X_ENCODER_A, INPUT);

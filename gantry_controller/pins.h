@@ -21,7 +21,13 @@
 #define Z_ENCODER_A 21
 #define Z_ENCODER_B 24
 
+#define X_LENGTH 60.00
+#define Y_LENGTH 55.00
+#define Z_LENGTH 90.00
+
 #define DRILL_PWM 10
+#define DRILL_FEEDBACK 0
+#define DRILL_POWER 26
 
 #define DATAPIN 50
 #define CLOCKPIN 52
@@ -30,7 +36,7 @@
 #define CS_3 34
 #define CS_4 35
 
-#define MM_PER_REV 0.61 //1/41.7"
+#define MM_PER_REV 0.609113 //1/41.7"
 
 #define STEPPER_CPR 24
 #define ENCODER_CPR 512
@@ -44,4 +50,4 @@
 
 #define STEPPER_ENCODER_TOL 0.1
 
-#define POSITION_TOLERANCE 0.1 //mm
+#define POSITION_TOLERANCE 0.05 //mm

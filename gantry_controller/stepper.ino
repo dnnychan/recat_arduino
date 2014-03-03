@@ -15,7 +15,7 @@ void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin,
   
   digitalWrite(enable_pin,LOW);
   digitalWrite(dir_pin,LOW);
-  digitalWrite(switch_pin,HIGH);
+  digitalWrite(switch_pin,HIGH); // internal pullup
   
   stepper->step_pin = step_pin;
   stepper->dir_pin = dir_pin;
