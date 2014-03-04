@@ -33,7 +33,7 @@ QueueArray<double> z_queue;
 
 int new_commands = 0;
 
-int stepper_speed = 5;
+int stepper_speed = 5;    // I don't think this actually does anything
 
 //int encoder_position_x = 0;
 
@@ -50,14 +50,18 @@ void setup() {
   initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE,X_BUTTON,AXIS_X);
   initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE,Y_BUTTON,AXIS_Y);
   initializeStepper(&z_stepper,Z_STEP,Z_DIR,Z_ENABLE,Z_BUTTON,AXIS_Z);
-  calibrateStepper(&z_stepper);
-  calibrateStepper(&x_stepper);
-  calibrateStepper(&y_stepper);
   initializeEncoders();
   initializeRingBuffer(&ring_buffer);
   initializeMagEncoder(&mag_encoder_1,&mag_encoder_2,&mag_encoder_3,&mag_encoder_4);
-  
   Serial.begin(9600);
+  
+  calibrateStepper(&z_stepper);
+  delay(500);
+  calibrateStepper(&x_stepper);
+  delay(500);
+  calibrateStepper(&y_stepper);
+  resetEncoders();
+  
   Serial.println("Hi Danny!");
   
   pinMode(DRILL_POWER, OUTPUT);
@@ -83,9 +87,14 @@ void loop() {
     bldc_is_spinning = true;
   else
     bldc_is_spinning = false;
+  /*
+  Serial.print(readMagEncoder(&mag_encoder_1));
+  Serial.print("\t");
+  Serial.print(readMagEncoder(&mag_encoder_2));
+  Serial.print("\t");
+  Serial.println(readMagEncoder(&mag_encoder_4));   */
   
   if (enable_steppers && bldc_is_spinning) {
-    //Serial.println(readMagEncoder(&mag_encoder_1));
     /*Serial.print(getEncoderDistance(x_stepper.axis));
     Serial.print("\t");
     Serial.print(getEncoderDistance(y_stepper.axis));
@@ -186,29 +195,37 @@ void serialHandler(){
     enable_steppers = true;
     
     double enqueue_value = convertToNumber(command, 5) + convertToNumber(command, 8) * 0.01; 
-    if (enqueue_value < X_LENGTH)    
-      x_queue.enqueue(enqueue_value);
-    else 
-      x_queue.enqueue(X_LENGTH);  
+    if (enqueue_value > X_LENGTH)    
+      x_queue.enqueue(X_LENGTH);
+    else if (enqueue_value < 0)
+      x_queue.enqueue(0);
+    else
+      x_queue.enqueue(enqueue_value);  
       
     enqueue_value = convertToNumber(command,11) + convertToNumber(command,14) * 0.01;
-    if (enqueue_value < Y_LENGTH)
-      y_queue.enqueue(enqueue_value);
-    else
+    if (enqueue_value > Y_LENGTH)
       y_queue.enqueue(Y_LENGTH);
+    else if (enqueue_value < 0)
+      y_queue.enqueue(0);
+    else
+      y_queue.enqueue(enqueue_value);
     
     enqueue_value = (int)(command.charAt(17) - '0') * 100 + convertToNumber(command,18) + convertToNumber(command,21) * 0.01;
-    if (enqueue_value < Z_LENGTH) 
-      z_queue.enqueue(enqueue_value);
+    if (enqueue_value > Z_LENGTH) 
+      z_queue.enqueue(Z_LENGTH);
+    else if (enqueue_value < 0)
+      z_queue.enqueue(0);
     else
-      z_queue.enqueue(Z_LENGTH); 
-     
-    //Serial.println("added new destination");
+      z_queue.enqueue(enqueue_value); 
+
   } else if (command.startsWith("bldc")) { // change bldc speed: bldc xx
     new_bldc_speed = convertToNumber(command, 5); 
   } else if (command.startsWith("step")) { // change step speed: step xx
     stepper_speed = convertToNumber(command,5);
-  } else if (command.startsWith("cont")) {
+    changeStepperSpeed(&x_stepper,stepper_speed);
+    changeStepperSpeed(&y_stepper,stepper_speed);
+    changeStepperSpeed(&z_stepper,stepper_speed);
+  } else if (command.startsWith("cont")) { // continue
     enable_steppers = true;
   } else if (command.startsWith("on")) {
     digitalWrite(DRILL_POWER,HIGH);
@@ -238,8 +255,16 @@ void serialHandler(){
     Serial.println(getEncoderDistance(z_stepper.axis));
   } else if (command.startsWith("gAng")) {    // get angles
     //char buffer [25];
-    //sprintf(buffer, "%05.2f %05.2f %05.2f %05.2f", readMagEncoder(&mag_encoder_1), readMagEncoder(&mag_encoder_2), readMagEncoder(&mag_encoder_3), readMagEncoder(&mag_encoder_4));
+    //sprintf(buffer, "%05.2f %05.2f %05.2f %05.2f", readMagEncoder(&mag_encoder_1), readMagEncoder(&mag_encoder_2), /*readMagEncoder(&mag_encoder_3)*/0, readMagEncoder(&mag_encoder_4));
     //Serial.println(buffer);
+    Serial.print(readMagEncoder(&mag_encoder_1));
+    Serial.print(" ");
+    Serial.print(readMagEncoder(&mag_encoder_2));
+    Serial.print(" ");
+    //Serial.print(readMagEncoder(&mag_encoder_3));
+    Serial.print(0);
+    Serial.print(" ");
+    Serial.println(readMagEncoder(&mag_encoder_4));
   } else if (command.startsWith("qEmp")) {    //are queues empty
     if (!x_queue.isEmpty() && !y_queue.isEmpty() && !z_queue.isEmpty()) {
       Serial.println(0);    // queues aren't empty

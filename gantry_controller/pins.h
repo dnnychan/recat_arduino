@@ -21,9 +21,9 @@
 #define Z_ENCODER_A 21
 #define Z_ENCODER_B 24
 
-#define X_LENGTH 60.00
-#define Y_LENGTH 55.00
-#define Z_LENGTH 90.00
+#define X_LENGTH 52.00
+#define Y_LENGTH 50.00
+#define Z_LENGTH 95.00
 
 #define DRILL_PWM 10
 #define DRILL_FEEDBACK 0

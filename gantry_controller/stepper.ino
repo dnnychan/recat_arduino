@@ -22,6 +22,7 @@ void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin,
   stepper->enable_pin = enable_pin;
   stepper->switch_pin = switch_pin;
   stepper->axis = axis;
+  stepper->current_speed=5;
 }
 
 void stepOnce(struct StepperMotor * stepper, int step_speed) {
@@ -37,11 +38,32 @@ void stepOnce(struct StepperMotor * stepper, int step_speed) {
 }
 
 void calibrateStepper(struct StepperMotor * stepper) {
-  stepper->cur_dir = STEPPER_BACKWARD;
-  
+  //stepper->cur_dir = STEPPER_BACKWARD;
+  changeStepperDir(stepper, STEPPER_FORWARD);
   wakeStepper(stepper);
-  while(digitalRead(stepper->switch_pin)) {
-    stepOnce(stepper,current_speed);
+  
+  if (stepper->axis == AXIS_Z) {
+    while(digitalRead(stepper->switch_pin)) {
+      stepOnce(stepper,stepper->current_speed);
+    }
+  } else {
+    double previous_position, new_position;
+    previous_position = getEncoderDistance(stepper->axis);
+    stepOnce(stepper,stepper->current_speed);
+    stepOnce(stepper,stepper->current_speed);
+    stepOnce(stepper,stepper->current_speed);
+    new_position = getEncoderDistance(stepper->axis);
+    //Serial.print(previous_position);
+    //Serial.println(new_position);
+    while (abs(new_position - previous_position) > 0.01) {
+      previous_position = new_position;
+      stepOnce(stepper,stepper->current_speed);
+      stepOnce(stepper,stepper->current_speed);
+      stepOnce(stepper,stepper->current_speed);
+      new_position = getEncoderDistance(stepper->axis);
+      //Serial.print(previous_position);
+      //Serial.println(new_position);
+    }
   }
   stepper->steps = 0;
   sleepStepper(stepper);
@@ -52,9 +74,12 @@ void changeStepperDir(struct StepperMotor * stepper, int dir) {
   digitalWrite(stepper->dir_pin,dir);
 }
 
+void changeStepperSpeed(struct StepperMotor * stepper, int new_speed) { stepper->current_speed = new_speed; }
+
 void wakeStepper(struct StepperMotor * stepper) { digitalWrite(stepper->enable_pin,HIGH); }
 void sleepStepper(struct StepperMotor * stepper) { digitalWrite(stepper->enable_pin,LOW); }
 
+/*
 void goToStepperPosition(struct StepperMotor * stepper, double pos) {
   
   //int encoder_position = getEncoderDistance(stepper->axis);
@@ -82,4 +107,4 @@ boolean checkPosition(struct StepperMotor * stepper) {
     return true;
   else
     return false;
-}
+}*/

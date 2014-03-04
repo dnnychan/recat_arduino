@@ -56,3 +56,9 @@ double getEncoderDistance(int encoder_num) {
   else if (encoder_num == AXIS_Z)
     return ((double)encoder_z_pos / ENCODER_CPR * MM_PER_REV / 2);
 }
+
+void resetEncoders() {
+  encoder_x_pos = 0;
+  encoder_y_pos = 0;
+  encoder_z_pos = 0;
+}
