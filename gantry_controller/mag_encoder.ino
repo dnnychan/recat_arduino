@@ -13,9 +13,9 @@ void initializeMagEncoder (struct MagEncoder * mag_encoder_1, struct MagEncoder 
   mag_encoder_2->minus_90 = 1895;
   mag_encoder_2->CS_pin = CS_2;
   
-  mag_encoder_3->zero = 1984;
-  mag_encoder_3->plus_90 = 2982;
-  mag_encoder_3->minus_90 = 930;
+  mag_encoder_3->zero = 3162;
+  mag_encoder_3->plus_90 = 32;
+  mag_encoder_3->minus_90 = 2017;
   mag_encoder_3->CS_pin = CS_3;
   
   mag_encoder_4->zero = 3720;
@@ -47,10 +47,10 @@ double readMagEncoder (struct MagEncoder * mag_encoder) {
   
   // only works if plus_90 > zero > minus_90
   if (raw_data < mag_encoder->zero) {
-    //return (double)(raw_data - mag_encoder->zero) * 90 / abs(mag_encoder->zero - mag_encoder->minus_90);
-    return (double)(raw_data - mag_encoder->zero) * 1.570796327 / abs(mag_encoder->zero - mag_encoder->minus_90);
+    return (double)(raw_data - mag_encoder->zero) * 90 / abs(mag_encoder->zero - mag_encoder->minus_90);
+    //return (double)(raw_data - mag_encoder->zero) * 1.570796327 / abs(mag_encoder->zero - mag_encoder->minus_90);
   } else {
-    //return (double)(raw_data - mag_encoder->zero) * 90 / abs(mag_encoder->plus_90 - mag_encoder->zero);
-    return (double)(raw_data - mag_encoder->zero) * 1.570796327 / abs(mag_encoder->plus_90 - mag_encoder->zero);
+    return (double)(raw_data - mag_encoder->zero) * 90 / abs(mag_encoder->plus_90 - mag_encoder->zero);
+    //return (double)(raw_data - mag_encoder->zero) * 1.570796327 / abs(mag_encoder->plus_90 - mag_encoder->zero);
   }
 }

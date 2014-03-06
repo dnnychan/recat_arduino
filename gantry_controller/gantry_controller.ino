@@ -18,6 +18,7 @@ struct MagEncoder mag_encoder_4;
 int cur_bldc_speed = 0; //30 to 90 at R=470
 int new_bldc_speed = 0;
 int bldc_feedback = 1023;
+int previous_direction = 0;
 bool enable_steppers = true;
 bool bldc_is_spinning = false;
 
@@ -60,6 +61,12 @@ void setup() {
   calibrateStepper(&x_stepper);
   delay(500);
   calibrateStepper(&y_stepper);
+  delay(500);
+  calibrateStepper(&z_stepper);
+  delay(500);
+  calibrateStepper(&x_stepper);
+  delay(500);
+  calibrateStepper(&y_stepper);
   resetEncoders();
   
   Serial.println("Hi Danny!");
@@ -83,6 +90,7 @@ void loop() {
   }
   
   bldc_feedback=analogRead(DRILL_FEEDBACK);
+  //Serial.println(bldc_feedback);
   if (bldc_feedback < 50)
     bldc_is_spinning = true;
   else
@@ -108,9 +116,11 @@ void loop() {
       if (getEncoderDistance(x_stepper.axis) > x_destination) {
         changeStepperDir(&x_stepper, STEPPER_FORWARD);
         stepOnce(&x_stepper,stepper_speed);
+        previous_direction = 1;
       } else if (getEncoderDistance(x_stepper.axis) < x_destination) {
         changeStepperDir(&x_stepper, STEPPER_BACKWARD);
         stepOnce(&x_stepper,stepper_speed);
+        previous_direction = 2;
       }
     }
     else { // x is correct
@@ -123,9 +133,11 @@ void loop() {
         if (getEncoderDistance(y_stepper.axis) > y_destination) {
           changeStepperDir(&y_stepper, STEPPER_FORWARD);
           stepOnce(&y_stepper,stepper_speed);
+          previous_direction = 3;
         } else if (getEncoderDistance(y_stepper.axis) < y_destination) {
           changeStepperDir(&y_stepper, STEPPER_BACKWARD);
           stepOnce(&y_stepper,stepper_speed);
+          previous_direction = 4;
         }
       }
       else { //x, y are correct
@@ -138,13 +150,16 @@ void loop() {
           if (getEncoderDistance(z_stepper.axis) > z_destination) {
             changeStepperDir(&z_stepper, STEPPER_FORWARD);
             stepOnce(&z_stepper,stepper_speed);
+            previous_direction = 5;
           } else if (getEncoderDistance(z_stepper.axis) < z_destination) {
             changeStepperDir(&z_stepper, STEPPER_BACKWARD);
             stepOnce(&z_stepper,stepper_speed);
+            previous_direction = 6;
           }
         }
         else {
           sleepStepper(&z_stepper);
+          previous_direction = 0;
           
           //delay(100);
           
@@ -156,11 +171,36 @@ void loop() {
         } // else z
       } // else y
     } // else x
-  } else { //!enable_steppers
+  } else if (enable_steppers) { // bldc is off, but we want it to be on--ie it's stuck
+    //back the motor back?
+    if (previous_direction == 1) {
+      changeStepperDir(&x_stepper, STEPPER_BACKWARD);
+      stepOnce(&x_stepper,stepper_speed);
+    } else if (previous_direction == 2) {
+      changeStepperDir(&x_stepper, STEPPER_FORWARD);
+      stepOnce(&x_stepper,stepper_speed);
+    } else if (previous_direction == 3) {
+      changeStepperDir(&y_stepper, STEPPER_BACKWARD);
+      stepOnce(&y_stepper,stepper_speed);
+    } else if (previous_direction == 4) {
+      changeStepperDir(&y_stepper, STEPPER_FORWARD);
+      stepOnce(&y_stepper,stepper_speed);
+    } else if (previous_direction == 5) {
+      changeStepperDir(&z_stepper, STEPPER_BACKWARD);
+      stepOnce(&z_stepper,stepper_speed);
+    } else if (previous_direction == 6) {
+      changeStepperDir(&z_stepper, STEPPER_FORWARD);
+      stepOnce(&z_stepper,stepper_speed);
+    }
+    
+    previous_direction = 0;
+  }
+  else { //!enable_steppers && !bldc_is_on
     
     sleepStepper(&x_stepper);
     sleepStepper(&y_stepper);
     sleepStepper(&z_stepper);
+    previous_direction = 0;
   }
   
 }
@@ -261,8 +301,8 @@ void serialHandler(){
     Serial.print(" ");
     Serial.print(readMagEncoder(&mag_encoder_2));
     Serial.print(" ");
-    //Serial.print(readMagEncoder(&mag_encoder_3));
-    Serial.print(0);
+    Serial.print(readMagEncoder(&mag_encoder_3));
+    //Serial.print(0);
     Serial.print(" ");
     Serial.println(readMagEncoder(&mag_encoder_4));
   } else if (command.startsWith("qEmp")) {    //are queues empty

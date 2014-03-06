@@ -1,8 +1,6 @@
 #include "stepper_motor.h"
 #include "pins.h"
 
-int current_speed = 5;
-
 void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin, int enable_pin, int switch_pin, int axis)
 {
   stepper->steps = 0;
@@ -27,9 +25,9 @@ void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin,
 
 void stepOnce(struct StepperMotor * stepper, int step_speed) {
   digitalWrite(stepper->step_pin, HIGH);
-  delay(step_speed);
+  delay(stepper->current_speed);
   digitalWrite(stepper->step_pin, LOW);
-  delay(step_speed);
+  delay(stepper->current_speed);
   
   if (stepper->cur_dir==STEPPER_FORWARD)
     stepper->steps++;
@@ -52,10 +50,12 @@ void calibrateStepper(struct StepperMotor * stepper) {
     stepOnce(stepper,stepper->current_speed);
     stepOnce(stepper,stepper->current_speed);
     stepOnce(stepper,stepper->current_speed);
+    delay(20);
     new_position = getEncoderDistance(stepper->axis);
     //Serial.print(previous_position);
     //Serial.println(new_position);
     while (abs(new_position - previous_position) > 0.01) {
+      //Serial.println(stepper->axis);
       previous_position = new_position;
       stepOnce(stepper,stepper->current_speed);
       stepOnce(stepper,stepper->current_speed);
