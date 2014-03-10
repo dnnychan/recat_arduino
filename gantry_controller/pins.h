@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAIN_POWER 1
+
 #define X_STEP 46
 #define X_DIR 47
 #define X_ENABLE 37
