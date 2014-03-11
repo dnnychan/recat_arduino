@@ -20,7 +20,7 @@ void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin,
   stepper->enable_pin = enable_pin;
   stepper->switch_pin = switch_pin;
   stepper->axis = axis;
-  stepper->current_speed=5;
+  stepper->current_speed=10;
 }
 
 void stepOnce(struct StepperMotor * stepper, int step_speed) {
@@ -48,7 +48,9 @@ void calibrateStepper(struct StepperMotor * stepper) {
     double previous_position, new_position;
     previous_position = getEncoderDistance(stepper->axis);
     stepOnce(stepper,stepper->current_speed);
+    delay(20);
     stepOnce(stepper,stepper->current_speed);
+    delay(20);
     stepOnce(stepper,stepper->current_speed);
     delay(20);
     new_position = getEncoderDistance(stepper->axis);

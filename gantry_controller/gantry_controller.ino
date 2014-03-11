@@ -63,15 +63,15 @@ void setup() {
   Serial.begin(9600);
   
   calibrateStepper(&z_stepper);
-  delay(500);
+  delay(100);
   calibrateStepper(&x_stepper);
-  delay(500);
+  delay(100);
   calibrateStepper(&y_stepper);
-  delay(500);
+  delay(100);
   calibrateStepper(&z_stepper);
-  delay(500);
+  delay(100);
   calibrateStepper(&x_stepper);
-  delay(500);
+  delay(100);
   calibrateStepper(&y_stepper);
   resetEncoders();
   
@@ -83,7 +83,7 @@ void setup() {
 }
 
 void loop() {
-  if (1){//analogRead(MAIN_POWER) > 200) {    // PUT THIS BACK
+  if (analogRead(MAIN_POWER) > 200) {    // PUT THIS BACK
     serialHandler();
     
     if (cur_bldc_speed != new_bldc_speed) {
@@ -93,15 +93,20 @@ void loop() {
         cur_bldc_speed += 5;
       else if (new_bldc_speed < cur_bldc_speed)
         cur_bldc_speed -= 5;
-      analogWrite(DRILL_PWM,cur_bldc_speed);
+      //analogWrite(DRILL_PWM,cur_bldc_speed);
     }
+    analogWrite(DRILL_PWM,cur_bldc_speed);
+    /*Serial.print(cur_bldc_speed);
+    Serial.print("\t");
+    Serial.println(new_bldc_speed);*/
     
     bldc_feedback=analogRead(DRILL_FEEDBACK);
     //Serial.println(bldc_feedback);
-    if (bldc_feedback < 50)
+    if (bldc_feedback < 600)
       bldc_is_spinning = true;
     else
       bldc_is_spinning = false;
+   
     /*
     Serial.print(readMagEncoder(&mag_encoder_1));
     Serial.print("\t");
@@ -109,12 +114,58 @@ void loop() {
     Serial.print("\t");
     Serial.println(readMagEncoder(&mag_encoder_4));   */
     
-    if (enable_steppers && bldc_is_spinning) {
-      /*Serial.print(getEncoderDistance(x_stepper.axis));
-      Serial.print("\t");
-      Serial.print(getEncoderDistance(y_stepper.axis));
-      Serial.print("\t");
-      Serial.println(getEncoderDistance(z_stepper.axis));*/
+    /*
+    Serial.print(getEncoderDistance(x_stepper.axis));
+    Serial.print("\t");
+    Serial.print(getEncoderDistance(y_stepper.axis));
+    Serial.print("\t");
+    Serial.println(getEncoderDistance(z_stepper.axis));*/
+  
+    if (enable_steppers && !bldc_is_spinning && cur_bldc_speed != 0) {// bldc is off, but we want it to be on--ie it's stuck
+      //back the motor back?
+      //Serial.println("stuck");
+      /*
+      if (previous_direction == 1) {
+        changeStepperDir(&x_stepper, STEPPER_BACKWARD);
+        for (int i = 0; i < 40; i++)
+          stepOnce(&x_stepper,stepper_speed);
+
+      } else if (previous_direction == 2) {
+        changeStepperDir(&x_stepper, STEPPER_FORWARD);
+        for (int i = 0; i < 40; i++)
+          stepOnce(&x_stepper,stepper_speed);
+      } else if (previous_direction == 3) {
+        changeStepperDir(&y_stepper, STEPPER_BACKWARD);
+        for (int i = 0; i < 40; i++)
+          stepOnce(&y_stepper,stepper_speed);
+      } else if (previous_direction == 4) {
+        changeStepperDir(&y_stepper, STEPPER_FORWARD);
+        for (int i = 0; i < 40; i++)
+          stepOnce(&y_stepper,stepper_speed);
+      } else if (previous_direction == 5) {
+        changeStepperDir(&z_stepper, STEPPER_BACKWARD);
+        for (int i = 0; i < 40; i++)
+          stepOnce(&z_stepper,stepper_speed);
+      } else if (previous_direction == 6) {
+        changeStepperDir(&z_stepper, STEPPER_FORWARD);
+        if(!digitalRead(stepper->switch_pin)) {
+          for (int i = 0; i < 40; i++)
+            stepOnce(&z_stepper,stepper_speed);
+        }
+      }
+      
+      previous_direction = 0;
+      delay(500);*/
+      
+      wakeStepper(&z_stepper);
+      changeStepperDir(&z_stepper, STEPPER_FORWARD);
+      if (digitalRead(z_stepper.switch_pin)) {
+        for (int i = 0; i < 30; i++)
+          stepOnce(&z_stepper,stepper_speed);
+      }
+      delay(250);
+      sleepStepper(&z_stepper);
+    } else if (enable_steppers && bldc_is_spinning) { 
       
       // x stepper control
       if (abs(getEncoderDistance(x_stepper.axis) - x_destination) > POSITION_TOLERANCE) {
@@ -164,13 +215,13 @@ void loop() {
               previous_direction = 6;
             }
           }
-          else {
+          else {    //reached destination
             sleepStepper(&z_stepper);
             previous_direction = 0;
             
             //delay(100);
             
-            if (!x_queue.isEmpty() && !y_queue.isEmpty() && !z_queue.isEmpty()) {
+            if (!x_queue.isEmpty() && !y_queue.isEmpty() && !z_queue.isEmpty()) {  //pop next destination
               x_destination = x_queue.dequeue();
               y_destination = y_queue.dequeue();
               z_destination = z_queue.dequeue();
@@ -178,43 +229,20 @@ void loop() {
           } // else z
         } // else y
       } // else x
-    } else if (enable_steppers) { // bldc is off, but we want it to be on--ie it's stuck
-      //back the motor back?
-      if (previous_direction == 1) {
-        changeStepperDir(&x_stepper, STEPPER_BACKWARD);
-        stepOnce(&x_stepper,stepper_speed);
-      } else if (previous_direction == 2) {
-        changeStepperDir(&x_stepper, STEPPER_FORWARD);
-        stepOnce(&x_stepper,stepper_speed);
-      } else if (previous_direction == 3) {
-        changeStepperDir(&y_stepper, STEPPER_BACKWARD);
-        stepOnce(&y_stepper,stepper_speed);
-      } else if (previous_direction == 4) {
-        changeStepperDir(&y_stepper, STEPPER_FORWARD);
-        stepOnce(&y_stepper,stepper_speed);
-      } else if (previous_direction == 5) {
-        changeStepperDir(&z_stepper, STEPPER_BACKWARD);
-        stepOnce(&z_stepper,stepper_speed);
-      } else if (previous_direction == 6) {
-        changeStepperDir(&z_stepper, STEPPER_FORWARD);
-        stepOnce(&z_stepper,stepper_speed);
-      }
-      
-      previous_direction = 0;
-    }
-    else { //!enable_steppers && !bldc_is_on
+    } else { //!enable_steppers && !bldc_is_on
       
       sleepStepper(&x_stepper);
       sleepStepper(&y_stepper);
       sleepStepper(&z_stepper);
-      previous_direction = 0;
+      //previous_direction = 0;
     }
   } else {
+    delay(100);
     //Serial.println("power off");
-    cur_bldc_speed = 0;
+    /*cur_bldc_speed = 0;
     new_bldc_speed = 0;
     analogWrite(DRILL_PWM,cur_bldc_speed);
-    enable_steppers = false;
+    enable_steppers = false;*/
   }
 }
 
@@ -272,7 +300,8 @@ void serialHandler(){
       z_queue.enqueue(enqueue_value); 
 
   } else if (command.startsWith("bldc")) { // change bldc speed: bldc xx
-    new_bldc_speed = convertToNumber(command, 5); 
+    new_bldc_speed = convertToNumber(command, 5);//(int)(command.charAt(5) - '0') * 100 + convertToNumber(command, 6); //3 digit. 099 results the same as 255 with our motor, so not going to bother
+    digitalWrite(DRILL_POWER,HIGH);
   } else if (command.startsWith("step")) { // change step speed: step xx
     stepper_speed = convertToNumber(command,5);
     changeStepperSpeed(&x_stepper,stepper_speed);
@@ -337,7 +366,7 @@ void serialEvent() {
   //Serial.println("new input");
   String incoming_data = "";
   while (Serial.available()) {
-    // get the new byte:
+    // get the new byte: 
     char in_char = (char)Serial.read();
     Serial.print(in_char);
     // add it to the string
