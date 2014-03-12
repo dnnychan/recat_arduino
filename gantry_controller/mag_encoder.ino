@@ -22,10 +22,10 @@ void initializeMagEncoder (struct MagEncoder * mag_encoder_1, struct MagEncoder 
   mag_encoder_2->minus_90 = 3938;
   mag_encoder_2->CS_pin = CS_2;
   
-  mag_encoder_3->m1 = -0.0764;
-  mag_encoder_3->m2 = -0.0764;
-  mag_encoder_3->b1 = 240.16;
-  mag_encoder_3->b2 = 240.16;
+  mag_encoder_3->m1 = -0.0893;
+  mag_encoder_3->m2 = -0.0945;
+  mag_encoder_3->b1 = 3.573;
+  mag_encoder_3->b2 = 390.37;
   mag_encoder_3->zero = 3162;
   mag_encoder_3->plus_90 = 32;
   mag_encoder_3->minus_90 = 2017;
@@ -62,6 +62,7 @@ double readMagEncoder (struct MagEncoder * mag_encoder) {
   digitalWrite(mag_encoder->CS_pin,HIGH);
   //return raw_data;    //uncomment for raw data
   
+  // use equations
   if (raw_data < 2048)
     return raw_data * mag_encoder->m1 + mag_encoder->b1;
   else

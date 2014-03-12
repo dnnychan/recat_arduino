@@ -3,6 +3,7 @@
 #include "ringbuffer.h"
 #include "mag_encoder.h"
 #include <QueueArray.h>
+#include <Servo.h> 
 
 /*
 NICE TO HAVE:
@@ -20,13 +21,16 @@ struct MagEncoder mag_encoder_1;
 struct MagEncoder mag_encoder_2;
 struct MagEncoder mag_encoder_3;
 struct MagEncoder mag_encoder_4;
-
+/*
 int cur_bldc_speed = 0; //30 to 90 at R=470
 int new_bldc_speed = 0;
-int bldc_feedback = 1023;
+int bldc_feedback = 1023;*/
 int previous_direction = 0;
 bool enable_steppers = true;
-bool bldc_is_spinning = false;
+/*
+bool bldc_is_spinning = false;*/
+int drill_speed = 1105;
+bool power_off = true;
 
 struct RingBuffer ring_buffer;
 
@@ -38,6 +42,8 @@ QueueArray<double> x_queue;
 QueueArray<double> y_queue;
 QueueArray<double> z_queue;
 
+Servo bldc;
+
 int new_commands = 0;
 
 int stepper_speed = 5;    // I don't think this actually does anything
@@ -46,13 +52,17 @@ int stepper_speed = 5;    // I don't think this actually does anything
 
 void setup() {
   // TODO: Make BLDC not jump around during start up
+  /*
   pinMode(DRILL_PWM,OUTPUT);
   // Changing PWM Frequency from http://forum.arduino.cc/index.php?PHPSESSID=vtjh1giaejdbbssm01hvhlnl76&topic=72092.msg541587#msg541587
   int myEraser = 7;             // this is 111 in binary and is used as an eraser
   TCCR2B &= ~myEraser;   // this operation (AND plus NOT),  set the three bits in TCCR2B to 0
   int myPrescaler = 1;         // this could be a number in [1 , 6]. 1=31kHz
   TCCR2B |= myPrescaler;  //this operation (OR), replaces the last three bits in TCCR2B with our new value 011
-  analogWrite(DRILL_PWM,0);
+  analogWrite(DRILL_PWM,0);*/
+  bldc.attach(DRILL_PWM);
+  bldc.writeMicroseconds(1100);
+  delay(8000);
   
   initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE,X_BUTTON,AXIS_X);
   initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE,Y_BUTTON,AXIS_Y);
@@ -75,17 +85,32 @@ void setup() {
   calibrateStepper(&y_stepper);
   resetEncoders();
   
-  Serial.println("Hi Danny!");
+  if (analogRead(MAIN_POWER) > 200)
+    power_off = false;
+  else
+    power_off = true;
   
+  //bldc.writeMicroseconds(1300);
+  
+  Serial.println("Hi Danny!");
+  /*
   pinMode(DRILL_POWER, OUTPUT);
-  digitalWrite(DRILL_POWER, LOW);
+  digitalWrite(DRILL_POWER, LOW);*/
   
 }
 
 void loop() {
   if (analogRead(MAIN_POWER) > 200) {    // PUT THIS BACK
+  
+    if (power_off == true) {     // start up sequence for bldc
+      //Serial.println("hi");
+      bldc.writeMicroseconds(1100);
+      delay(8000);
+      bldc.writeMicroseconds(drill_speed);
+      power_off = false;
+    }
     serialHandler();
-    
+    /*
     if (cur_bldc_speed != new_bldc_speed) {
       if (abs(cur_bldc_speed - new_bldc_speed) < 5)
         cur_bldc_speed = new_bldc_speed;
@@ -95,25 +120,28 @@ void loop() {
         cur_bldc_speed -= 5;
       //analogWrite(DRILL_PWM,cur_bldc_speed);
     }
-    analogWrite(DRILL_PWM,cur_bldc_speed);
+    analogWrite(DRILL_PWM,cur_bldc_speed);*/
     /*Serial.print(cur_bldc_speed);
     Serial.print("\t");
     Serial.println(new_bldc_speed);*/
-    
+    /*
     bldc_feedback=analogRead(DRILL_FEEDBACK);
     //Serial.println(bldc_feedback);
     if (bldc_feedback < 600)
       bldc_is_spinning = true;
     else
       bldc_is_spinning = false;
+      */
    
     /*
     Serial.print(readMagEncoder(&mag_encoder_1));
     Serial.print("\t");
     Serial.print(readMagEncoder(&mag_encoder_2));
     Serial.print("\t");
-    Serial.println(readMagEncoder(&mag_encoder_4));   */
-    
+    Serial.print(readMagEncoder(&mag_encoder_3));
+    Serial.print("\t");
+    Serial.println(readMagEncoder(&mag_encoder_4));   
+    */
     /*
     Serial.print(getEncoderDistance(x_stepper.axis));
     Serial.print("\t");
@@ -121,7 +149,7 @@ void loop() {
     Serial.print("\t");
     Serial.println(getEncoderDistance(z_stepper.axis));*/
   
-    if (enable_steppers && !bldc_is_spinning && cur_bldc_speed != 0) {// bldc is off, but we want it to be on--ie it's stuck
+    /*if (enable_steppers && !bldc_is_spinning && cur_bldc_speed != 0) {// bldc is off, but we want it to be on--ie it's stuck
       //back the motor back?
       //Serial.println("stuck");
       /*
@@ -155,7 +183,7 @@ void loop() {
       }
       
       previous_direction = 0;
-      delay(500);*/
+      delay(500);
       
       wakeStepper(&z_stepper);
       changeStepperDir(&z_stepper, STEPPER_FORWARD);
@@ -165,70 +193,80 @@ void loop() {
       }
       delay(250);
       sleepStepper(&z_stepper);
-    } else if (enable_steppers && bldc_is_spinning) { 
+    } else if (enable_steppers && bldc_is_spinning) { */
+    if (enable_steppers) {
       
-      // x stepper control
-      if (abs(getEncoderDistance(x_stepper.axis) - x_destination) > POSITION_TOLERANCE) {
-        wakeStepper(&x_stepper);
+      if ((getEncoderDistance(z_stepper.axis) - z_destination) > POSITION_TOLERANCE) { // lift up first
+        wakeStepper(&z_stepper);
         
-        if (getEncoderDistance(x_stepper.axis) > x_destination) {
-          changeStepperDir(&x_stepper, STEPPER_FORWARD);
-          stepOnce(&x_stepper,stepper_speed);
-          previous_direction = 1;
-        } else if (getEncoderDistance(x_stepper.axis) < x_destination) {
-          changeStepperDir(&x_stepper, STEPPER_BACKWARD);
-          stepOnce(&x_stepper,stepper_speed);
-          previous_direction = 2;
+        if (getEncoderDistance(z_stepper.axis) > z_destination) {
+          changeStepperDir(&z_stepper, STEPPER_FORWARD);
+          stepOnce(&z_stepper,stepper_speed);
+          previous_direction = 5;
         }
-      }
-      else { // x is correct
-        sleepStepper(&x_stepper);
+      } else {
         
-        // y stepper control
-        if (abs(getEncoderDistance(y_stepper.axis) - y_destination) > POSITION_TOLERANCE) {
-          wakeStepper(&y_stepper);
+        // x stepper control
+        if (abs(getEncoderDistance(x_stepper.axis) - x_destination) > POSITION_TOLERANCE) {
+          sleepStepper(&z_stepper);
+          wakeStepper(&x_stepper);
           
-          if (getEncoderDistance(y_stepper.axis) > y_destination) {
-            changeStepperDir(&y_stepper, STEPPER_FORWARD);
-            stepOnce(&y_stepper,stepper_speed);
-            previous_direction = 3;
-          } else if (getEncoderDistance(y_stepper.axis) < y_destination) {
-            changeStepperDir(&y_stepper, STEPPER_BACKWARD);
-            stepOnce(&y_stepper,stepper_speed);
-            previous_direction = 4;
+          if (getEncoderDistance(x_stepper.axis) > x_destination) {
+            changeStepperDir(&x_stepper, STEPPER_FORWARD);
+            stepOnce(&x_stepper,stepper_speed);
+            previous_direction = 1;
+          } else if (getEncoderDistance(x_stepper.axis) < x_destination) {
+            changeStepperDir(&x_stepper, STEPPER_BACKWARD);
+            stepOnce(&x_stepper,stepper_speed);
+            previous_direction = 2;
           }
         }
-        else { //x, y are correct
-          sleepStepper(&y_stepper);
-           
-          // z stepper control
-          if (abs(getEncoderDistance(z_stepper.axis) - z_destination) > POSITION_TOLERANCE) {
-            wakeStepper(&z_stepper);
+        else { // x is correct
+          sleepStepper(&x_stepper);
+          
+          // y stepper control
+          if (abs(getEncoderDistance(y_stepper.axis) - y_destination) > POSITION_TOLERANCE) {
+            sleepStepper(&z_stepper);
+            wakeStepper(&y_stepper);
             
-            if (getEncoderDistance(z_stepper.axis) > z_destination) {
-              changeStepperDir(&z_stepper, STEPPER_FORWARD);
-              stepOnce(&z_stepper,stepper_speed);
-              previous_direction = 5;
-            } else if (getEncoderDistance(z_stepper.axis) < z_destination) {
-              changeStepperDir(&z_stepper, STEPPER_BACKWARD);
-              stepOnce(&z_stepper,stepper_speed);
-              previous_direction = 6;
+            if (getEncoderDistance(y_stepper.axis) > y_destination) {
+              changeStepperDir(&y_stepper, STEPPER_FORWARD);
+              stepOnce(&y_stepper,stepper_speed);
+              previous_direction = 3;
+            } else if (getEncoderDistance(y_stepper.axis) < y_destination) {
+              changeStepperDir(&y_stepper, STEPPER_BACKWARD);
+              stepOnce(&y_stepper,stepper_speed);
+              previous_direction = 4;
             }
           }
-          else {    //reached destination
-            sleepStepper(&z_stepper);
-            previous_direction = 0;
-            
-            //delay(100);
-            
-            if (!x_queue.isEmpty() && !y_queue.isEmpty() && !z_queue.isEmpty()) {  //pop next destination
-              x_destination = x_queue.dequeue();
-              y_destination = y_queue.dequeue();
-              z_destination = z_queue.dequeue();
+          else { //x, y are correct
+            sleepStepper(&y_stepper);
+             
+            // z stepper control
+            if (abs(getEncoderDistance(z_stepper.axis) - z_destination) > POSITION_TOLERANCE) {
+              wakeStepper(&z_stepper);
+              
+              if (getEncoderDistance(z_stepper.axis) < z_destination) {
+                changeStepperDir(&z_stepper, STEPPER_BACKWARD);
+                stepOnce(&z_stepper,stepper_speed);
+                previous_direction = 6;
+              }
             }
-          } // else z
-        } // else y
-      } // else x
+            else {    //reached destination
+              sleepStepper(&z_stepper);
+              previous_direction = 0;
+              
+              //delay(100);
+              
+              if (!x_queue.isEmpty() && !y_queue.isEmpty() && !z_queue.isEmpty()) {  //pop next destination
+                x_destination = x_queue.dequeue();
+                y_destination = y_queue.dequeue();
+                z_destination = z_queue.dequeue();
+              }
+            } // else z
+          } // else y
+        } // else x
+      }
     } else { //!enable_steppers && !bldc_is_on
       
       sleepStepper(&x_stepper);
@@ -238,6 +276,8 @@ void loop() {
     }
   } else {
     delay(100);
+    power_off = true;
+    //bldc.writeMicroseconds(1100);
     //Serial.println("power off");
     /*cur_bldc_speed = 0;
     new_bldc_speed = 0;
@@ -268,12 +308,13 @@ void serialHandler(){
   //Serial.println(" ");
   
   if (command.startsWith("stop")) {  //stop everything
+  /*
     cur_bldc_speed = 0;
     new_bldc_speed = 0;
-    analogWrite(DRILL_PWM,cur_bldc_speed);
+    analogWrite(DRILL_PWM,cur_bldc_speed);*/
     enable_steppers = false;
   } else if (command.startsWith("goto")) {  // go to position: goto XX.xx YY.yy ZZZ.zz
-    enable_steppers = true;
+    //enable_steppers = true;
     
     double enqueue_value = convertToNumber(command, 5) + convertToNumber(command, 8) * 0.01; 
     if (enqueue_value > X_LENGTH)    
@@ -300,8 +341,11 @@ void serialHandler(){
       z_queue.enqueue(enqueue_value); 
 
   } else if (command.startsWith("bldc")) { // change bldc speed: bldc xx
-    new_bldc_speed = convertToNumber(command, 5);//(int)(command.charAt(5) - '0') * 100 + convertToNumber(command, 6); //3 digit. 099 results the same as 255 with our motor, so not going to bother
-    digitalWrite(DRILL_POWER,HIGH);
+    /*new_bldc_speed = convertToNumber(command, 5);//(int)(command.charAt(5) - '0') * 100 + convertToNumber(command, 6); //3 digit. 099 results the same as 255 with our motor, so not going to bother
+    digitalWrite(DRILL_POWER,HIGH);*/
+    drill_speed = convertToNumber(command, 5) * 100 + convertToNumber(command, 7);
+    bldc.writeMicroseconds(drill_speed);
+    //Serial.println(drill_speed);
   } else if (command.startsWith("step")) { // change step speed: step xx
     stepper_speed = convertToNumber(command,5);
     changeStepperSpeed(&x_stepper,stepper_speed);
@@ -310,11 +354,17 @@ void serialHandler(){
   } else if (command.startsWith("cont")) { // continue
     enable_steppers = true;
   } else if (command.startsWith("on")) {
+    enable_steppers = true;
+    drill_speed = 1300;
+    bldc.writeMicroseconds(drill_speed);
+    /*
     digitalWrite(DRILL_POWER,HIGH);
-    new_bldc_speed = 20;
+    new_bldc_speed = 20;*/
   } else if (command.startsWith("off")) {
+    bldc.writeMicroseconds(1105);
+    /*
     digitalWrite(DRILL_POWER,LOW);
-    new_bldc_speed = 0;
+    new_bldc_speed = 0;*/
   } else if (command.startsWith("clear")) {
     while (!x_queue.isEmpty() && !y_queue.isEmpty() && !z_queue.isEmpty()) {
       // clear the queues
@@ -351,7 +401,7 @@ void serialHandler(){
     if (!x_queue.isEmpty() && !y_queue.isEmpty() && !z_queue.isEmpty()) {
       Serial.println(0);    // queues aren't empty
     } else {
-      Serial.println(1);    //queues are empty
+      Serial.println(1);    // queues are empty
     }
   }
 }
