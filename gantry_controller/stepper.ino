@@ -20,7 +20,7 @@ void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin,
   stepper->enable_pin = enable_pin;
   stepper->switch_pin = switch_pin;
   stepper->axis = axis;
-  stepper->current_speed=10;
+  stepper->current_speed=25;
 }
 
 void stepOnce(struct StepperMotor * stepper, int step_speed) {

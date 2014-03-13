@@ -100,6 +100,7 @@ void setup() {
 }
 
 void loop() {
+  serialHandler();
   if (analogRead(MAIN_POWER) > 200) {    // PUT THIS BACK
   
     if (power_off == true) {     // start up sequence for bldc
@@ -109,7 +110,7 @@ void loop() {
       bldc.writeMicroseconds(drill_speed);
       power_off = false;
     }
-    serialHandler();
+    
     /*
     if (cur_bldc_speed != new_bldc_speed) {
       if (abs(cur_bldc_speed - new_bldc_speed) < 5)
@@ -277,7 +278,7 @@ void loop() {
   } else {
     delay(100);
     power_off = true;
-    //bldc.writeMicroseconds(1100);
+    bldc.writeMicroseconds(1100);
     //Serial.println("power off");
     /*cur_bldc_speed = 0;
     new_bldc_speed = 0;
