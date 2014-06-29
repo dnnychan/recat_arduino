@@ -1,8 +1,9 @@
 #include "pins.h"
 #include "mag_encoder.h"
 
+// initialize all encoders at once
 void initializeMagEncoder (struct MagEncoder * mag_encoder_1, struct MagEncoder * mag_encoder_2, struct MagEncoder * mag_encoder_3, struct MagEncoder * mag_encoder_4) {
-  // calibration values. determine this.
+  // calibration values. determined in mag_encoder.xlsx
   
   mag_encoder_1->m1 = -0.0892;
   mag_encoder_1->m2 = -0.0892;
@@ -53,10 +54,14 @@ void initializeMagEncoder (struct MagEncoder * mag_encoder_1, struct MagEncoder 
 }
 
 double readMagEncoder (struct MagEncoder * mag_encoder) {
+  // read the magnetic encoder
+  
+  // turn on the desired chip select pin, and change the clock to high. this causes the encoder to start sending data
   digitalWrite(mag_encoder->CS_pin,LOW);
   digitalWrite(CLOCKPIN,HIGH);
   delay(50);
   
+  // this function reads the data from the spi-like port using the clock and data pins. also converts the 10 bit data to an int
   int raw_data = (shiftIn(DATAPIN,CLOCKPIN,MSBFIRST) << 4) + (shiftIn(DATAPIN,CLOCKPIN,MSBFIRST) >> 4);
   
   digitalWrite(mag_encoder->CS_pin,HIGH);
@@ -67,6 +72,8 @@ double readMagEncoder (struct MagEncoder * mag_encoder) {
     return raw_data * mag_encoder->m1 + mag_encoder->b1;
   else
     return raw_data * mag_encoder->m2 + mag_encoder->b2;
+    
+    //stuff below is obsolete
   /*
   // deals with wrapping around for encoder readings
   if (raw_data < mag_encoder->zero && raw_data > mag_encoder->minus_90) {

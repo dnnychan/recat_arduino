@@ -4,6 +4,7 @@ long encoder_x_pos = 0;
 long encoder_y_pos = 0;
 long encoder_z_pos = 0;
 
+//initialization
 void initializeEncoders() {
   pinMode(X_ENCODER_A, INPUT);
   pinMode(X_ENCODER_B, INPUT);
@@ -24,6 +25,8 @@ void initializeEncoders() {
   attachInterrupt(2,zEncoderInterrupt,CHANGE);
 }
 
+// one pin from each rotary encoder is attached to an interrupt. this way we are guaranteed that the encoders always update and isn't blocked
+// direction is figured out by the position of the other pin of the encoder.
 void xEncoderInterrupt() {
   if (digitalRead(X_ENCODER_A) == digitalRead(X_ENCODER_B)) {
     encoder_x_pos++;
@@ -48,6 +51,7 @@ void zEncoderInterrupt() {
   }
 }
 
+// return the encoder position by doing the calculation
 double getEncoderDistance(int encoder_num) {
   if (encoder_num == AXIS_X)
     return ((double)encoder_x_pos / ENCODER_CPR * MM_PER_REV / 2);

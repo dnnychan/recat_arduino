@@ -1,7 +1,10 @@
 #include "stepper_motor.h"
 #include "pins.h"
 
+// Stepper control functions
+
 void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin, int enable_pin, int switch_pin, int axis)
+// must be run for each stepper motor. Initializes necessary pins and variables
 {
   stepper->steps = 0;
   stepper->cur_dir = STEPPER_FORWARD;
@@ -24,6 +27,9 @@ void initializeStepper(struct StepperMotor * stepper, int step_pin, int dir_pin,
 }
 
 void stepOnce(struct StepperMotor * stepper, int step_speed) {
+// Move the stepper one tick
+
+  // generate square wave
   digitalWrite(stepper->step_pin, HIGH);
   delay(stepper->current_speed);
   digitalWrite(stepper->step_pin, LOW);
@@ -36,15 +42,18 @@ void stepOnce(struct StepperMotor * stepper, int step_speed) {
 }
 
 void calibrateStepper(struct StepperMotor * stepper) {
+// move stepper back to original position
   //stepper->cur_dir = STEPPER_BACKWARD;
   changeStepperDir(stepper, STEPPER_FORWARD);
   wakeStepper(stepper);
   
   if (stepper->axis == AXIS_Z) {
+    // z axis uses a limit switch
     while(digitalRead(stepper->switch_pin)) {
       stepOnce(stepper,stepper->current_speed);
     }
   } else {
+    // move back until the position no longer changes from the encoder. do multiple steps to exaggerate the change. this part can be improved.
     double previous_position, new_position;
     previous_position = getEncoderDistance(stepper->axis);
     stepOnce(stepper,stepper->current_speed);
@@ -56,6 +65,8 @@ void calibrateStepper(struct StepperMotor * stepper) {
     new_position = getEncoderDistance(stepper->axis);
     //Serial.print(previous_position);
     //Serial.println(new_position);
+    
+    // check to see if position changes. this part can be improved.
     while (abs(new_position - previous_position) > 0.01) {
       //Serial.println(stepper->axis);
       previous_position = new_position;
@@ -72,12 +83,15 @@ void calibrateStepper(struct StepperMotor * stepper) {
 }
 
 void changeStepperDir(struct StepperMotor * stepper, int dir) {
+// make stepper go the other way by changing the direction pin
   stepper->cur_dir = dir;
   digitalWrite(stepper->dir_pin,dir);
 }
 
 void changeStepperSpeed(struct StepperMotor * stepper, int new_speed) { stepper->current_speed = new_speed; }
+// store the speed
 
+// wake and sleep functions necessary to move the stepper. stepper always draws current when awake, so it's best to sleep it when not in use.
 void wakeStepper(struct StepperMotor * stepper) { digitalWrite(stepper->enable_pin,HIGH); }
 void sleepStepper(struct StepperMotor * stepper) { digitalWrite(stepper->enable_pin,LOW); }
 

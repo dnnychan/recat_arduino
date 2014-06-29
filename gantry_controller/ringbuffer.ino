@@ -1,5 +1,7 @@
 #include "ringbuffer.h"
 
+// Commands to use the ring buffer data structure. described by the function name
+
 void initializeRingBuffer(struct RingBuffer * rb) {
   rb->rd_indx = 0;
   rb->wr_indx = 0;

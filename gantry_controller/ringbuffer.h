@@ -1,5 +1,7 @@
 #pragma once
 
+// Data structure for ring buffer used in serial communication
+
 #define RB_SIZE 256
 
 struct RingBuffer{

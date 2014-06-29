@@ -1,5 +1,7 @@
 #pragma once
 
+// Stepper motor object
+
 struct StepperMotor {
   int steps;
   int cur_dir;

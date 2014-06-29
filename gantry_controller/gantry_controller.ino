@@ -21,10 +21,8 @@ struct MagEncoder mag_encoder_1;
 struct MagEncoder mag_encoder_2;
 struct MagEncoder mag_encoder_3;
 struct MagEncoder mag_encoder_4;
-/*
-int cur_bldc_speed = 0; //30 to 90 at R=470
-int new_bldc_speed = 0;
-int bldc_feedback = 1023;*/
+
+// previous_destination was used to check what the last action is. it isn't used in this implementation
 int previous_direction = 0;
 bool enable_steppers = true;
 /*
@@ -34,10 +32,12 @@ bool power_off = true;
 
 struct RingBuffer ring_buffer;
 
+// current destination we need to achieve.
 double x_destination = 0;
 double y_destination = 0;
 double z_destination = 0;
 
+// queue of destinations dumped in over serial
 QueueArray<double> x_queue;
 QueueArray<double> y_queue;
 QueueArray<double> z_queue;
@@ -48,22 +48,14 @@ int new_commands = 0;
 
 int stepper_speed = 5;    // I don't think this actually does anything
 
-//int encoder_position_x = 0;
-
 void setup() {
-  // TODO: Make BLDC not jump around during start up
-  /*
-  pinMode(DRILL_PWM,OUTPUT);
-  // Changing PWM Frequency from http://forum.arduino.cc/index.php?PHPSESSID=vtjh1giaejdbbssm01hvhlnl76&topic=72092.msg541587#msg541587
-  int myEraser = 7;             // this is 111 in binary and is used as an eraser
-  TCCR2B &= ~myEraser;   // this operation (AND plus NOT),  set the three bits in TCCR2B to 0
-  int myPrescaler = 1;         // this could be a number in [1 , 6]. 1=31kHz
-  TCCR2B |= myPrescaler;  //this operation (OR), replaces the last three bits in TCCR2B with our new value 011
-  analogWrite(DRILL_PWM,0);*/
+  
+  // initialization for the drill
   bldc.attach(DRILL_PWM);
   bldc.writeMicroseconds(1100);
   delay(8000);
   
+  // run the other initialization functions
   initializeStepper(&x_stepper,X_STEP,X_DIR,X_ENABLE,X_BUTTON,AXIS_X);
   initializeStepper(&y_stepper,Y_STEP,Y_DIR,Y_ENABLE,Y_BUTTON,AXIS_Y);
   initializeStepper(&z_stepper,Z_STEP,Z_DIR,Z_ENABLE,Z_BUTTON,AXIS_Z);
@@ -72,6 +64,7 @@ void setup() {
   initializeMagEncoder(&mag_encoder_1,&mag_encoder_2,&mag_encoder_3,&mag_encoder_4);
   Serial.begin(9600);
   
+  // calibration runs twice because it isn't too reliable...
   calibrateStepper(&z_stepper);
   delay(100);
   calibrateStepper(&x_stepper);
@@ -85,6 +78,7 @@ void setup() {
   calibrateStepper(&y_stepper);
   resetEncoders();
   
+  // check if 12V power is on
   if (analogRead(MAIN_POWER) > 200)
     power_off = false;
   else
@@ -101,9 +95,9 @@ void setup() {
 
 void loop() {
   serialHandler();
-  if (analogRead(MAIN_POWER) > 200) {    // PUT THIS BACK
+  if (analogRead(MAIN_POWER) > 200) {    // check if the main power is on
   
-    if (power_off == true) {     // start up sequence for bldc
+    if (power_off == true) {     // start up sequence for bldc. resets if power is removed, and runs once when turning on the power
       //Serial.println("hi");
       bldc.writeMicroseconds(1100);
       delay(8000);
@@ -111,98 +105,21 @@ void loop() {
       power_off = false;
     }
     
-    /*
-    if (cur_bldc_speed != new_bldc_speed) {
-      if (abs(cur_bldc_speed - new_bldc_speed) < 5)
-        cur_bldc_speed = new_bldc_speed;
-      else if (new_bldc_speed > cur_bldc_speed)
-        cur_bldc_speed += 5;
-      else if (new_bldc_speed < cur_bldc_speed)
-        cur_bldc_speed -= 5;
-      //analogWrite(DRILL_PWM,cur_bldc_speed);
-    }
-    analogWrite(DRILL_PWM,cur_bldc_speed);*/
-    /*Serial.print(cur_bldc_speed);
-    Serial.print("\t");
-    Serial.println(new_bldc_speed);*/
-    /*
-    bldc_feedback=analogRead(DRILL_FEEDBACK);
-    //Serial.println(bldc_feedback);
-    if (bldc_feedback < 600)
-      bldc_is_spinning = true;
-    else
-      bldc_is_spinning = false;
-      */
-   
-    /*
-    Serial.print(readMagEncoder(&mag_encoder_1));
-    Serial.print("\t");
-    Serial.print(readMagEncoder(&mag_encoder_2));
-    Serial.print("\t");
-    Serial.print(readMagEncoder(&mag_encoder_3));
-    Serial.print("\t");
-    Serial.println(readMagEncoder(&mag_encoder_4));   
-    */
-    /*
-    Serial.print(getEncoderDistance(x_stepper.axis));
-    Serial.print("\t");
-    Serial.print(getEncoderDistance(y_stepper.axis));
-    Serial.print("\t");
-    Serial.println(getEncoderDistance(z_stepper.axis));*/
-  
-    /*if (enable_steppers && !bldc_is_spinning && cur_bldc_speed != 0) {// bldc is off, but we want it to be on--ie it's stuck
-      //back the motor back?
-      //Serial.println("stuck");
-      /*
-      if (previous_direction == 1) {
-        changeStepperDir(&x_stepper, STEPPER_BACKWARD);
-        for (int i = 0; i < 40; i++)
-          stepOnce(&x_stepper,stepper_speed);
-
-      } else if (previous_direction == 2) {
-        changeStepperDir(&x_stepper, STEPPER_FORWARD);
-        for (int i = 0; i < 40; i++)
-          stepOnce(&x_stepper,stepper_speed);
-      } else if (previous_direction == 3) {
-        changeStepperDir(&y_stepper, STEPPER_BACKWARD);
-        for (int i = 0; i < 40; i++)
-          stepOnce(&y_stepper,stepper_speed);
-      } else if (previous_direction == 4) {
-        changeStepperDir(&y_stepper, STEPPER_FORWARD);
-        for (int i = 0; i < 40; i++)
-          stepOnce(&y_stepper,stepper_speed);
-      } else if (previous_direction == 5) {
-        changeStepperDir(&z_stepper, STEPPER_BACKWARD);
-        for (int i = 0; i < 40; i++)
-          stepOnce(&z_stepper,stepper_speed);
-      } else if (previous_direction == 6) {
-        changeStepperDir(&z_stepper, STEPPER_FORWARD);
-        if(!digitalRead(stepper->switch_pin)) {
-          for (int i = 0; i < 40; i++)
-            stepOnce(&z_stepper,stepper_speed);
-        }
-      }
-      
-      previous_direction = 0;
-      delay(500);
-      
-      wakeStepper(&z_stepper);
-      changeStepperDir(&z_stepper, STEPPER_FORWARD);
-      if (digitalRead(z_stepper.switch_pin)) {
-        for (int i = 0; i < 30; i++)
-          stepOnce(&z_stepper,stepper_speed);
-      }
-      delay(250);
-      sleepStepper(&z_stepper);
-    } else if (enable_steppers && bldc_is_spinning) { */
-    if (enable_steppers) {
+    if (enable_steppers) {    // if steppers are enabled, we move each axis one at a time to the next point in the queue
+    // the priority is to lift up the drill first so it isn't in the patient
+    // the following is a series of if-else's 
+    // each stepper is kept awake until we are done with that axis rather than sleeping after each step
+    // the current position is read in the if statements and compared to the destination
+    // if all of them (x,y,z) are correct, we pop the next destination from the queue and repeat the process
+    // until there is nothing left in the queue
       
       if ((getEncoderDistance(z_stepper.axis) - z_destination) > POSITION_TOLERANCE) { // lift up first
-        wakeStepper(&z_stepper);
+        wakeStepper(&z_stepper);  
         
+        // check position
         if (getEncoderDistance(z_stepper.axis) > z_destination) {
-          changeStepperDir(&z_stepper, STEPPER_FORWARD);
-          stepOnce(&z_stepper,stepper_speed);
+          changeStepperDir(&z_stepper, STEPPER_FORWARD);  // set the direction
+          stepOnce(&z_stepper,stepper_speed);            // step the stepper
           previous_direction = 5;
         }
       } else {
@@ -270,15 +187,16 @@ void loop() {
       }
     } else { //!enable_steppers && !bldc_is_on
       
+      // put everything to sleep
       sleepStepper(&x_stepper);
       sleepStepper(&y_stepper);
       sleepStepper(&z_stepper);
       //previous_direction = 0;
     }
-  } else {
+  } else { // power is off
     delay(100);
     power_off = true;
-    bldc.writeMicroseconds(1100);
+    bldc.writeMicroseconds(1100);    // turn off the signal to the esc
     //Serial.println("power off");
     /*cur_bldc_speed = 0;
     new_bldc_speed = 0;
@@ -287,18 +205,19 @@ void loop() {
   }
 }
 
-double convertToNumber(String string_to_convert, int first_digit) {
+double convertToNumber(String string_to_convert, int first_digit) {  //converts a two character string to a double. no checks if you give it letters.
   return (int)(string_to_convert.charAt(first_digit) - '0') * 10 + (int)(string_to_convert.charAt(first_digit + 1) -'0'); 
 }
 
-void serialHandler(){
-  if (ringBufferEmpty(&ring_buffer) || new_commands == 0)
+void serialHandler(){   //process commands stored in ring buffer
+  if (ringBufferEmpty(&ring_buffer) || new_commands == 0)  //check for new commands
     return;
   
   String command = "";
   char cur_char = ringBufferDeque(&ring_buffer);
   
   while (cur_char != '\n' && (!ringBufferEmpty(&ring_buffer))) {
+    // read a command from the string buffer.
     command += cur_char;
     cur_char = ringBufferDeque(&ring_buffer);
   }
@@ -308,6 +227,22 @@ void serialHandler(){
   
   //Serial.println(" ");
   
+  /*
+  List of commands (these functions should mostly have wrappers in the python):
+  stop                    stops everything from running
+  goto XX.xx YY.yy ZZZ.zz  adds that position to the queue of points the robot to move to. units in mm
+  bldc xxxx               write xxxx to the pwm pin in the bldc. 1000 stops, and 2000 is max speed. typically ran at 1200-1400 ish during final tests
+  step xx                 stepper delay when generating square waves. rarely used. changes all stepper speeds
+  cont                    turns steppers back on
+  on                      turns stepper and bldc on at default speeds
+  off                     stops everything
+  clear                   clears gantry queue
+  gAng                    get the magnetic encoder angles in degrees. degrees are used over radians because degrees provide more resolution when sending (defaults to 2 decimal precision. didn't bother changing)
+  gPos                    get the current position of the drill in the gantry
+  qEmp                    check if the queue is empty
+  
+  
+  */
   if (command.startsWith("stop")) {  //stop everything
   /*
     cur_bldc_speed = 0;
@@ -412,27 +347,21 @@ void serialHandler(){
  hardware serial RX.  This routine is run between each
  time loop() runs, so using delay inside loop can delay
  response.  Multiple bytes of data may be available.
+ All this part does is store the incoming commands into
+ a buffer so they can be processed when the system has 
+ time.
  */
 void serialEvent() {
   //Serial.println("new input");
   String incoming_data = "";
-  while (Serial.available()) {
+  while (Serial.available()) {  // while there is still data in the serial buffer
     // get the new byte: 
     char in_char = (char)Serial.read();
     Serial.print(in_char);
-    // add it to the string
-    //incoming_data += in_char;
-    // if the incoming character is a newline, set a flag
-    // so the main loop can do something about it:
-    /*if (in_char == '\n') {
-      // TODO: check for E-Stop command
-      if (incoming_data.length() < ringBufferRemainingSpaces(&ring_buffer)) {
-        for (unsigned int i = 0; i < incoming_data.length(); i++)
-          ringBufferEnque(&ring_buffer,incoming_data[i]);
-      }
-    }*/
+    
+    // add one new byte to the ring buffer.
     ringBufferEnque(&ring_buffer,in_char);
-    if (in_char == '\n')
+    if (in_char == '\n')    // a full command is ended by a line break.
       new_commands++;
   }
   //Serial.println(" ");
